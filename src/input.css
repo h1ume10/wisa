@@ -109,6 +109,18 @@
            focus-visible:bg-gold-600 active:translate-y-0 active:scale-[0.97];
   }
 
+  /* Small inline text link in the accent colour, for repeated low-emphasis
+     actions (e.g. one per service card) where a full bordered button reads
+     as too heavy repeated four times on one page. Same underline treatment
+     as the Team page's "Read more" toggle, just given a shared name since
+     it's now used in more than one place. */
+  .link-gold {
+    @apply inline-flex min-h-touch items-center text-base font-bold text-gold-700
+           underline decoration-gold-300 underline-offset-4 transition-colors duration-150
+           hover:text-gold-800 hover:decoration-gold-500
+           focus-visible:text-gold-800 focus-visible:decoration-gold-500;
+  }
+
   /* Secondary action: outlined, for use on light backgrounds. */
   .btn-secondary {
     @apply relative inline-flex min-h-touch min-w-touch items-center justify-center gap-2
