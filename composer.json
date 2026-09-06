@@ -1,0 +1,12 @@
+{
+    "name": "wisa/website",
+    "description": "Contact form mail delivery for the WISA website (static site, PHP only for the contact handler).",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

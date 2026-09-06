@@ -1,0 +1,36 @@
+# Defense in depth for the Xneelo (Apache) deployment. mail-config.php
+# executes as PHP and never echoes its contents, so a direct request to it
+# already returns a blank page rather than leaking the array — this simply
+# makes that explicit in case of any server misconfiguration.
+<Files "mail-config.php">
+    Require all denied
+</Files>
+
+<Files "composer.json">
+    Require all denied
+</Files>
+
+# Branded 404 page instead of Apache's bare default error page.
+ErrorDocument 404 /404.html
+
+# Compress text-based responses. mod_deflate ships enabled on Xneelo's
+# standard Apache/cPanel stack; if it's ever unavailable this block is
+# simply ignored rather than erroring, since it's wrapped in <IfModule>.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# Cache static assets in the visitor's browser so repeat page views on this
+# six-page site don't re-download the same CSS/JS/fonts/images every time.
+# HTML is deliberately left out so edits show up immediately on next visit.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 month"
+</IfModule>

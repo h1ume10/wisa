@@ -1,0 +1,7 @@
+node_modules/
+mail-config.php
+.env
+.gstack/
+reference/
+.impeccable/
+.claude/

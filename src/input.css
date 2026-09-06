@@ -1,0 +1,442 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Base layer — accessibility-first defaults.
+   These rules apply site-wide and are not meant to be overridden per page.
+   ========================================================================== */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans text-base antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display text-navy;
+  }
+
+  /* Visible, high-contrast focus ring for full keyboard navigability.
+     Applied to every focusable element, never suppressed.
+     Uses gold-600, not the brand DEFAULT gold: a focus ring needs 3:1
+     against whatever sits behind it, and this page has both a near-black
+     navy and a near-white paper background. DEFAULT gold clears 3:1 on
+     navy but falls short on white; gold-700 clears white but falls short
+     on navy. Gold-600 is the one shade in the ramp that clears both. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid #AB8A21;
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Respect prefers-reduced-motion: disable non-essential motion entirely. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ==========================================================================
+   Components layer — small set of reusable, hand-authored classes so every
+   page assembles the same header/nav/buttons/cards the same way.
+   ========================================================================== */
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 md:px-8;
+  }
+
+  /* Skip-to-content link: visually hidden until focused, per WCAG 2.4.1. */
+  /* Mobile nav panel: opens by fading and dropping down from the header it's
+     anchored under, and closes back along that same path (symmetric
+     enter/exit) instead of the old instant show/hide. `will-change` is set
+     only while a state class is present, not permanently, since this panel
+     is closed most of the time. main.js adds/removes .mobile-menu-open and
+     removes the `hidden` utility only long enough to run the transition
+     both ways; prefers-reduced-motion (global rule above) collapses the
+     duration to ~0, and main.js skips the closing delay in that case so the
+     panel never sits invisible-but-interactive. */
+  .mobile-menu {
+    @apply origin-top opacity-0 -translate-y-2 transition-all duration-200 ease-out-strong will-change-transform;
+  }
+
+  .mobile-menu.mobile-menu-open {
+    @apply translate-y-0 opacity-100;
+  }
+
+  .skip-link {
+    @apply absolute left-4 top-4 z-50 -translate-y-24 rounded bg-gold px-5 py-3
+           font-sans text-lg font-bold text-navy-900 transition-transform duration-150
+           focus:translate-y-0;
+  }
+
+  /* Primary call-to-action: gold on navy, meets AA contrast, 44px+ target.
+     Lifts on hover with a slightly DARKER gold fill (gold-600, not a
+     brighter gold-400) — darkening reads as a considered, professional
+     "pressed" response; a jump to a brighter shade read as a garish
+     flash. gold-600 still clears 6:1 against the navy-900 button text, so
+     nothing is lost on contrast. Active gives a physical "pressed" tap
+     feel — the lift resets AND the button scales down slightly, so a press
+     reads as an instant, tactile response rather than just an un-hover.
+     The active state fires on pointer-down, before release, which is what
+     makes it feel caught rather than laggy. All transform/shadow only, so
+     reduced-motion just removes the transition timing and keeps the end
+     state, per the global rule. */
+  /* relative + overflow-hidden on all three buttons is load-bearing for the
+     ripple effect below (main.js clips the ripple span to the button's own
+     bounds), not just a hover-lift leftover. rounded-sm -> rounded-md is
+     the corner-radius half of the Material-interaction pass — modest, not
+     full-pill; a law firm's buttons don't need to look like chips. */
+  .btn-primary {
+    @apply relative inline-flex min-h-touch min-w-touch items-center justify-center gap-2
+           overflow-hidden rounded-md bg-gold px-6 py-3 font-sans text-lg font-bold text-navy-900
+           shadow-card transition-all duration-150 ease-out-strong hover:-translate-y-0.5
+           hover:bg-gold-600
+           focus-visible:bg-gold-600 active:translate-y-0 active:scale-[0.97];
+  }
+
+  /* Secondary action: outlined, for use on light backgrounds. */
+  .btn-secondary {
+    @apply relative inline-flex min-h-touch min-w-touch items-center justify-center gap-2
+           overflow-hidden rounded-md border-2 border-navy px-6 py-3 font-sans text-lg font-bold
+           text-navy transition-all duration-150 ease-out-strong hover:-translate-y-0.5
+           hover:bg-navy hover:text-white
+           focus-visible:bg-navy focus-visible:text-white active:translate-y-0 active:scale-[0.97];
+  }
+
+  /* Call-to-action for use on the dark navy header/footer. Same darkening
+     logic as .btn-primary: fills to gold-600 on hover, not the brighter
+     DEFAULT gold, and drops the glow shadow that made the brightness jump
+     even more pronounced against the dark navy background. */
+  .btn-on-navy {
+    @apply relative inline-flex min-h-touch min-w-touch items-center justify-center gap-2
+           overflow-hidden rounded-md border-2 border-gold px-5 py-2.5 font-sans text-lg font-bold
+           text-gold transition-all duration-150 ease-out-strong hover:-translate-y-0.5
+           hover:border-gold-600 hover:bg-gold-600 hover:text-navy-900
+           focus-visible:border-gold-600 focus-visible:bg-gold-600 focus-visible:text-navy-900
+           active:translate-y-0 active:scale-[0.97];
+  }
+
+  /* Material-style ink ripple. Sized to 2x the surface's larger dimension
+     so a click anywhere inside always covers every corner by the time it
+     finishes expanding. currentColor means it automatically matches each
+     button's own text color at low opacity — no separate ripple color to
+     maintain per variant. main.js skips attaching the click listener
+     entirely under prefers-reduced-motion, rather than relying on the
+     animation-duration override to hide it, since a 0-duration ripple
+     would just be a flashing dot. */
+  .ripple {
+    @apply pointer-events-none absolute rounded-full bg-current opacity-25;
+    transform: scale(0);
+    animation: ripple-expand 500ms ease-out forwards;
+  }
+
+  @keyframes ripple-expand {
+    to {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+
+  /* Medium-weight 20px gold on navy falls short of 4.5:1 at the DEFAULT
+     amber shade, so wayfinding text on dark backgrounds uses gold-400
+     throughout (fills, borders, and bold/large text keep DEFAULT). */
+  /* active:text-gold-400 matches the hover color exactly, so a touch tap
+     (which fires :active on contact, before the click completes) confirms
+     the press immediately instead of waiting for a page to load. */
+  .nav-link {
+    @apply flex min-h-touch items-center whitespace-nowrap px-3 py-2 font-sans
+           text-lg font-medium text-white/90 transition-colors duration-150
+           hover:text-gold-400 focus-visible:text-gold-400 active:text-gold-400;
+  }
+
+  .nav-link[aria-current="page"] {
+    @apply text-gold-400 underline decoration-2 underline-offset-8;
+  }
+
+  .footer-link {
+    @apply inline-flex min-h-touch items-center py-2 font-sans text-lg text-white/85
+           underline decoration-white/30 underline-offset-4 transition-colors
+           duration-150 hover:text-gold-400 hover:decoration-gold-400
+           focus-visible:text-gold-400 active:text-gold-400 active:decoration-gold-400;
+  }
+
+  .footer-link[aria-current="page"] {
+    @apply font-bold text-gold-400 decoration-gold-400;
+  }
+
+  .eyebrow {
+    @apply font-sans text-lg font-bold uppercase tracking-wide text-gold-700;
+  }
+
+  /* Card with real depth: rounded corners, a resting shadow, a lift plus
+     stronger shadow on hover. Hover is enhancement only: every card is
+     still fully usable with a plain click/tap with no hover at all. Cards
+     large enough that a full 0.97 press-scale would look like a glitch, so
+     the press feedback is a much smaller 0.99 — still enough to confirm
+     the tap landed, without the card visibly shrinking.
+
+     @container here establishes the query context for this card's own
+     CHILDREN (see .icon-badge below) — not for its own padding. A size
+     container can't query itself for its own properties (that's a
+     circular dependency the CSS spec explicitly disallows), so this
+     class's own padding has to stay a fixed value; only descendants can
+     react to how wide the card itself renders. */
+  .section-card {
+    @apply @container relative overflow-hidden rounded-lg border border-navy-100 bg-white
+           p-8 pt-7 shadow-card transition-all duration-200
+           hover:-translate-y-1.5 hover:border-gold/40 hover:shadow-card-lg
+           active:scale-[0.99] active:shadow-card;
+  }
+
+  /* Circular icon badge, gold-outlined, for service/feature cards. Icons
+     inside are decorative (the card's own heading names the thing), so
+     they're marked aria-hidden wherever used. */
+  .icon-badge {
+    @apply mb-5 flex h-14 w-14 flex-shrink-0 items-center justify-center
+           rounded-full border border-gold/40 text-gold;
+  }
+
+  /* Scoped override, not a bare @max- variant — the installed
+     container-queries plugin only ships min-width variants (@sm:, @lg:,
+     etc.), nothing below a threshold. So instead: inside a .section-card
+     specifically, start a notch smaller, then grow back to the standalone
+     .icon-badge size once the card itself renders wide enough. Higher
+     selector specificity means this only ever touches icon-badges that
+     are actually inside a card; the standalone usages (Contact's detail
+     list, Legal Framework's inline rows, neither of which sit inside a
+     .section-card) keep the plain default above, untouched. */
+  .section-card .icon-badge {
+    @apply h-12 w-12 @sm:h-14 @sm:w-14;
+  }
+
+  /* Diagonal line-texture, matching the reference prototype's hero
+     background exactly (a repeating 60x60 tile with one faint diagonal
+     line), layered under a charcoal gradient. Used on hero bands that
+     don't already carry a photograph. */
+  .diagonal-texture {
+    background-image:
+      linear-gradient(135deg, rgba(28, 28, 30, 0.98) 0%, rgba(28, 28, 30, 0.85) 50%, rgba(28, 28, 30, 0.75) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect width='60' height='60' fill='%231C1C1E'/%3E%3Cline x1='0' y1='60' x2='60' y2='0' stroke='%23ffffff12' stroke-width='0.5'/%3E%3C/svg%3E");
+  }
+
+  /* Angled gold accent panel, bleeding off the right edge. Purely
+     decorative (aria-hidden), sits behind the hero content. */
+  .hero-accent-panel {
+    @apply pointer-events-none absolute inset-y-0 right-0 hidden w-[45%] md:block;
+    background: linear-gradient(135deg, transparent 30%, rgba(201, 162, 39, 0.1) 100%);
+    clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+
+  /* Soft gold glow behind a CTA band, matching the prototype's cta-banner
+     treatment. Purely decorative. */
+  .radial-glow {
+    @apply pointer-events-none absolute inset-0;
+    background: radial-gradient(ellipse at 50% 100%, rgba(201, 162, 39, 0.16) 0%, transparent 65%);
+  }
+
+  /* Large editorial pull-quote, set in the display serif. Used for WISA's
+     own stated commitments and objectives, never attributed to a named
+     individual unless that person actually said it. Paired with .quote-mark
+     for scale contrast instead of a border rule. */
+  .pull-quote {
+    @apply relative font-display text-2xl italic leading-snug text-navy md:text-3xl;
+  }
+
+  /* Oversized decorative quotation glyph. Purely typographic (no image, no
+     hand-rolled illustration) so it renders instantly and scales cleanly.
+     Always aria-hidden: it carries no information a screen reader needs.
+     Uses an opaque light tint (gold-200), not a translucent DEFAULT gold:
+     EB Garamond's quotation mark is a delicate, small-in-its-em-box glyph,
+     so low opacity on top of that made it read as a rendering glitch
+     rather than a deliberate scale-contrast mark. */
+  .quote-mark {
+    @apply pointer-events-none absolute select-none font-display leading-none
+           text-gold-200;
+  }
+
+  /* One-time entrance, used only on the hero at page load. Kept short and
+     singular by design: this site's audience skews older and less
+     technical, so motion stays a light accent, never a device that repeats
+     or hijacks scroll. Fully neutralised by the reduced-motion rule above. */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Hero background photograph: a licensed editorial photograph of a Lady
+     Justice statue (Unsplash, Gaétan Marceau Caron), not clip-art. The
+     overlay is a near-solid navy tint, not a light scrim: this keeps the
+     image as a ghostly texture that reads as gravitas rather than a loud
+     stock photo, and keeps contrast for the text in front of it equivalent
+     to a flat navy background regardless of what the photo shows. */
+  .hero-justice-bg {
+    background-image: linear-gradient(rgba(28, 28, 30, 0.95), rgba(28, 28, 30, 0.95)),
+      url("../assets/images/justice-statue-hero.jpg");
+    background-size: cover;
+    background-position: center 20%;
+  }
+
+  /* Same treatment, second licensed photo (Unsplash, Albert Stoynov), used
+     on the About page so it doesn't look like the same hero re-skinned. */
+  .about-justice-bg {
+    background-image: linear-gradient(rgba(28, 28, 30, 0.95), rgba(28, 28, 30, 0.95)),
+      url("../assets/images/justice-statue-architectural.jpg");
+    background-size: cover;
+    background-position: center 35%;
+  }
+
+  /* Third use of the Home hero's own photo (not a new stock image — the
+     brief was to extend what's already licensed, not source more), cropped
+     to a different position and given a slightly darker overlay so it
+     reads as a deliberate bookend with Home rather than a re-skin. Contact
+     was the flattest of the six pages (plain diagonal-texture, no ghost
+     word, no accent), which made it the right one to give this to. */
+  .contact-justice-bg {
+    background-image: linear-gradient(rgba(13, 13, 14, 0.94), rgba(28, 28, 30, 0.94)),
+      url("../assets/images/justice-statue-hero.jpg");
+    background-size: cover;
+    background-position: center 70%;
+  }
+
+  /* Fourth photo, a different subject: Pretoria/Tshwane skyline with the
+     Union Buildings (the actual seat of the South African government)
+     visible on the hillside (Unsplash, Sipho Ndebele). Used on the Legal
+     Framework page, where a real seat-of-government photo pairs with the
+     page's subject better than another statue shot. Same tint treatment
+     as the justice photos, kept slightly lighter so the skyline still
+     reads as a place, not just texture. */
+  .legal-pretoria-bg {
+    background-image: linear-gradient(rgba(28, 28, 30, 0.9), rgba(28, 28, 30, 0.93)),
+      url("../assets/images/pretoria-union-buildings.jpg");
+    background-size: cover;
+    background-position: center 30%;
+  }
+
+  /* Marquee/ticker band: a genuine structural device (not a color or
+     spacing change) for a list that was previously static wrapped pills.
+     The item list is duplicated once in the DOM so the loop is seamless;
+     the second copy is aria-hidden since the first already carries the
+     content to assistive tech. Pauses on hover/focus for anyone reading
+     it, and the global prefers-reduced-motion rule (top of this file)
+     collapses the animation duration to ~0, which freezes the track at
+     translateX(-50%) — exactly one full, undistorted copy of the list,
+     not a broken mid-scroll frame. */
+  .ticker-band {
+    @apply relative overflow-hidden;
+  }
+
+  .ticker-track {
+    @apply flex w-max items-center gap-10 whitespace-nowrap;
+    animation: ticker-scroll 32s linear infinite;
+  }
+
+  .ticker-band:hover .ticker-track,
+  .ticker-band:focus-within .ticker-track {
+    animation-play-state: paused;
+  }
+
+  @keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .ticker-divider {
+    @apply inline-block h-2 w-2 flex-shrink-0 rotate-45 bg-gold/50;
+  }
+
+  /* Oversized, near-invisible background word. Pure typography, no photo
+     dependency: the same "scale for gravitas" device as the quote-mark and
+     the hero photo, used once per page maximum so it reads as a deliberate
+     flourish rather than decoration. Always aria-hidden. */
+  .ghost-word {
+    @apply pointer-events-none absolute select-none whitespace-nowrap
+           font-display font-bold uppercase leading-none text-white/[0.05];
+  }
+
+  /* Light-background counterpart to .ghost-word — the white/[0.05] tint
+     above only reads against a dark photo/charcoal hero. Same oversized
+     glyph device, tuned to a faint gold tint so it stays visible (but
+     still just texture, not a focal element) against white/paper section
+     backgrounds. Used for the section-mark (§) accent that replaced the
+     old geometric corner shapes: one consistent typographic device across
+     every former accent spot, instead of a bespoke shape per page. */
+  .ghost-word-light {
+    @apply pointer-events-none absolute select-none whitespace-nowrap
+           font-display font-bold leading-none text-gold/[0.12];
+  }
+
+  /* Numeral / fact callout, for real figures drawn from source content only
+     (e.g. "4 founding directors") — never invented statistics. */
+  .stat-badge {
+    @apply flex flex-col gap-1;
+  }
+
+  .stat-badge dt {
+    @apply font-display text-4xl text-gold-700 md:text-5xl;
+  }
+
+  .stat-badge dd {
+    @apply font-sans text-lg text-navy-700;
+  }
+
+  /* First-letter drop cap for editorial intro paragraphs. Purely visual —
+     screen readers read the text unaffected, so this never harms
+     accessibility, only sighted presentation. */
+  .drop-cap::first-letter {
+    @apply float-left mr-3 mt-1 font-display text-6xl leading-[0.8] text-gold-700;
+  }
+
+  /* Contact form field. min-h-touch keeps single-line inputs comfortably
+     tappable; the visible border (not just a shadow) keeps the field
+     legible for low-vision users even before focus. */
+  .form-field {
+    @apply min-h-touch w-full rounded-sm border border-navy-200 bg-white px-4 py-3
+           text-lg text-navy transition-colors duration-150
+           focus:border-gold focus:outline-none;
+  }
+
+  .form-field[aria-invalid="true"] {
+    @apply border-red-600;
+  }
+
+  /* group-has-* reacts to the field's own aria-invalid state, which
+     main.js already sets on blur/submit — no new JS needed. This gives a
+     complete error signal (label AND input both shift), where previously
+     only the input's border changed and the label stayed neutral navy
+     right above a red-outlined field. */
+  .form-label {
+    @apply mb-2 block text-lg font-bold text-navy group-has-[[aria-invalid="true"]]:text-red-700;
+  }
+
+  .form-error {
+    @apply mt-2 text-base font-bold text-red-700;
+  }
+
+  /* Honeypot field: invisible and unreachable for real visitors (off-canvas,
+     aria-hidden, unfocusable), but still present in the raw HTML for bots
+     that fill in every field they find. Never display:none — some bots
+     specifically skip display:none fields because it's the well-known
+     honeypot tell, so an off-canvas position is the more effective trap. */
+  .honeypot-field {
+    @apply absolute left-[-9999px] top-auto h-px w-px overflow-hidden;
+  }
+}
