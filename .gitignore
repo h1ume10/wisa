@@ -1,0 +1,9 @@
+node_modules/
+vendor/
+mail-config.php
+.env
+.gstack/
+reference/
+.impeccable/
+.claude/
+WISA workplace investigations logo(1).png
